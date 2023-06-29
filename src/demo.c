@@ -103,7 +103,7 @@ void *detect_in_thread(void *ptr)
         float *X = det_s.data;
         //float *prediction =
 
-        if (frame_id % (detect_interval+1) == 0)
+        if (frame_id % detect_interval == 0)
         {
             network_predict(net, X);
             if (letter_box)
