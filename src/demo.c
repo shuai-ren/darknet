@@ -54,6 +54,7 @@ static const int thread_wait_ms = 1;
 static volatile int run_fetch_in_thread = 0;
 static volatile int run_detect_in_thread = 0;
 
+extern int detect_interval;
 
 void *fetch_in_thread(void *ptr)
 {
@@ -101,16 +102,28 @@ void *detect_in_thread(void *ptr)
         layer l = net.layers[net.n - 1];
         float *X = det_s.data;
         //float *prediction =
-        network_predict(net, X);
+
+        if (frame_id % (detect_interval+1) == 0)
+        {
+            network_predict(net, X);
+            if (letter_box)
+                dets = get_network_boxes(&net, get_width_mat(in_img), get_height_mat(in_img), demo_thresh, demo_thresh, 0, 1, &nboxes, 1); // letter box
+            else
+                dets = get_network_boxes(&net, net.w, net.h, demo_thresh, demo_thresh, 0, 1, &nboxes, 0); // resized
+        }
+        else
+            dets = get_network_boxes(&net, net.w, net.h, 1, demo_thresh, 0, 1, &nboxes, 0); 
+
+        // network_predict(net, X);
 
         cv_images[demo_index] = det_img;
         det_img = cv_images[(demo_index + avg_frames / 2 + 1) % avg_frames];
         demo_index = (demo_index + 1) % avg_frames;
 
-        if (letter_box)
-            dets = get_network_boxes(&net, get_width_mat(in_img), get_height_mat(in_img), demo_thresh, demo_thresh, 0, 1, &nboxes, 1); // letter box
-        else
-            dets = get_network_boxes(&net, net.w, net.h, demo_thresh, demo_thresh, 0, 1, &nboxes, 0); // resized
+        // if (letter_box)
+        //     dets = get_network_boxes(&net, get_width_mat(in_img), get_height_mat(in_img), demo_thresh, demo_thresh, 0, 1, &nboxes, 1); // letter box
+        // else
+        //     dets = get_network_boxes(&net, net.w, net.h, demo_thresh, demo_thresh, 0, 1, &nboxes, 0); // resized
 
         //const float nms = .45;
         //if (nms) {

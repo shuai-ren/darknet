@@ -39,6 +39,13 @@
 #include "upsample_layer.h"
 #include "parser.h"
 
+void getLocalTime(char* localTime)
+{
+
+        time_t timer = time(NULL);
+        strftime(localTime, 256, "%Y-%m-%d %H:%M:%S", localtime(&timer));
+}
+
 load_args get_base_args(network *net)
 {
     load_args args = { 0 };
@@ -1000,14 +1007,15 @@ void free_batch_detections(det_num_pair *det_num_pairs, int n)
 char *detection_to_json(detection *dets, int nboxes, int classes, char **names, long long int frame_id, char *filename)
 {
     const float thresh = 0.005; // function get_network_boxes() has already filtred dets by actual threshold
-
+    char localTime[256] = {0};
+    getLocalTime(localTime);
     char *send_buf = (char *)calloc(1024, sizeof(char));
     if (!send_buf) return 0;
     if (filename) {
         sprintf(send_buf, "{\n \"frame_id\":%lld, \n \"filename\":\"%s\", \n \"objects\": [ \n", frame_id, filename);
     }
     else {
-        sprintf(send_buf, "{\n \"frame_id\":%lld, \n \"objects\": [ \n", frame_id);
+        sprintf(send_buf, "{\"frame_id\":%lld,\"time\":\"%s\",\"objects\": [", frame_id, localTime);
     }
 
     int i, j;
@@ -1017,7 +1025,7 @@ char *detection_to_json(detection *dets, int nboxes, int classes, char **names, 
             int show = strncmp(names[j], "dont_show", 9);
             if (dets[i].prob[j] > thresh && show)
             {
-                if (class_id != -1) strcat(send_buf, ", \n");
+                if (class_id != -1) strcat(send_buf, ",");
                 class_id = j;
                 char *buf = (char *)calloc(2048, sizeof(char));
                 if (!buf) return 0;
@@ -1040,7 +1048,7 @@ char *detection_to_json(detection *dets, int nboxes, int classes, char **names, 
             }
         }
     }
-    strcat(send_buf, "\n ] \n}");
+    strcat(send_buf, "]}");
     return send_buf;
 }
 
